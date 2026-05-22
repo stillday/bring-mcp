@@ -10,6 +10,7 @@ dependencies = [
     "bring-api>=1.1.2",
     "mcp>=1.27.1",
     "aiohttp>=3.8",
+    "uvicorn>=0.30",
 ]
 
 [project.scripts]

@@ -118,7 +118,35 @@ async def add_items_bulk(list_uuid: str, items: list[dict[str, str]]) -> str:
 
 
 def main() -> None:
-    mcp.run(transport="stdio")
+    transport = os.environ.get("MCP_TRANSPORT", "stdio")
+    if transport == "http":
+        import uvicorn
+        from starlette.responses import Response
+        from starlette.types import ASGIApp, Receive, Scope, Send
+
+        token = os.environ.get("MCP_TOKEN", "")
+        port = int(os.environ.get("PORT", "8000"))
+
+        class BearerTokenAuth:
+            def __init__(self, app: ASGIApp) -> None:
+                self.app = app
+
+            async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+                if scope["type"] == "http" and token:
+                    headers = dict(scope.get("headers", []))
+                    auth = headers.get(b"authorization", b"").decode()
+                    if not auth.startswith("Bearer ") or auth[7:] != token:
+                        await Response(
+                            '{"error":"unauthorized"}',
+                            status_code=401,
+                            media_type="application/json",
+                        )(scope, receive, send)
+                        return
+                await self.app(scope, receive, send)
+
+        uvicorn.run(BearerTokenAuth(mcp.streamable_http_app()), host="0.0.0.0", port=port)
+    else:
+        mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":

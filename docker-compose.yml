@@ -1,0 +1,10 @@
+services:
+  bring-mcp:
+    image: ghcr.io/stillday/bring-mcp:latest
+    container_name: bring-mcp
+    ports:
+      - "127.0.0.1:3020:8000"
+    environment:
+      - MCP_TRANSPORT=http
+    env_file: .env
+    restart: unless-stopped
