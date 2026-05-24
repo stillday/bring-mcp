@@ -121,6 +121,7 @@ def main() -> None:
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
     if transport == "http":
         import uvicorn
+        from starlette.middleware.cors import CORSMiddleware
         from starlette.responses import Response
         from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -134,8 +135,9 @@ def main() -> None:
             async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
                 if scope["type"] == "http" and token:
                     headers = dict(scope.get("headers", []))
+                    method = scope.get("method", "")
                     auth = headers.get(b"authorization", b"").decode()
-                    if not auth.startswith("Bearer ") or auth[7:] != token:
+                    if method != "OPTIONS" and (not auth.startswith("Bearer ") or auth[7:] != token):
                         await Response(
                             '{"error":"unauthorized"}',
                             status_code=401,
@@ -144,7 +146,13 @@ def main() -> None:
                         return
                 await self.app(scope, receive, send)
 
-        uvicorn.run(BearerTokenAuth(mcp.streamable_http_app()), host="0.0.0.0", port=port)
+        app: ASGIApp = CORSMiddleware(
+            BearerTokenAuth(mcp.streamable_http_app()),
+            allow_origins=["https://claude.ai", "https://api.claude.ai"],
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        uvicorn.run(app, host="0.0.0.0", port=port)
     else:
         mcp.run(transport="stdio")
 
