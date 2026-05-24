@@ -27,7 +27,7 @@ async def get_bring() -> Bring:
     return _bring
 
 
-mcp = FastMCP("bring")
+mcp = FastMCP("bring", host="0.0.0.0")
 
 
 @mcp.tool()
